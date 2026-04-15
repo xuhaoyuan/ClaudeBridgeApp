@@ -4,110 +4,112 @@ set -euo pipefail
 # ============================================
 # ClaudeBridgeApp Release Build Script
 # ============================================
-# Usage:
+#
+# 使用方法:
 #   ./scripts/release.sh 1.1.0
 #
-# Prerequisites:
-#   1. Generate EdDSA key: $(find ~/Library/Developer/Xcode/DerivedData -name generate_keys -type f | head -1)
-#   2. Replace SUPublicEDKey in Info.plist with the generated public key
+# 首次使用前的一次性设置:
+#   1. 在 Xcode 中构建一次项目（为了下载 Sparkle 工具）
+#   2. 生成签名密钥:
+#      $(find ~/Library/Developer/Xcode/DerivedData -name generate_keys -type f | head -1)
+#      会输出公钥，把它填入 ClaudeBridgeApp/Info.plist 的 SUPublicEDKey
+#      私钥自动存入 macOS 钥匙串，不需要手动管理
+#
+# 不需要 Apple 开发者账号！
 # ============================================
 
-VERSION="${1:?Usage: ./scripts/release.sh <version>}"
-BUILD_NUMBER="${2:-$(date +%s)}"
+VERSION="${1:?用法: ./scripts/release.sh <版本号>  例如: ./scripts/release.sh 1.1.0}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
-ARCHIVE_PATH="${BUILD_DIR}/ClaudeBridgeApp.xcarchive"
-EXPORT_PATH="${BUILD_DIR}/export"
-ZIP_PATH="${BUILD_DIR}/ClaudeBridgeApp.zip"
+APP_NAME="ClaudeBridgeApp"
+ZIP_PATH="${BUILD_DIR}/${APP_NAME}.zip"
 
-echo "🔨 Building ClaudeBridgeApp v${VERSION} (build ${BUILD_NUMBER})..."
+echo ""
+echo "🔨 Building ${APP_NAME} v${VERSION}..."
+echo ""
 
-# Clean
+# 清理
 rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
-# Archive
-xcodebuild archive \
-  -project "${PROJECT_DIR}/ClaudeBridgeApp.xcodeproj" \
-  -scheme ClaudeBridgeApp \
+# 直接构建 Release（不需要 archive/export，避免签名问题）
+xcodebuild build \
+  -project "${PROJECT_DIR}/${APP_NAME}.xcodeproj" \
+  -scheme "${APP_NAME}" \
   -configuration Release \
-  -archivePath "${ARCHIVE_PATH}" \
+  -derivedDataPath "${BUILD_DIR}/DerivedData" \
   MARKETING_VERSION="${VERSION}" \
-  CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
-  | tail -5
+  CURRENT_PROJECT_VERSION="${VERSION}" \
+  CODE_SIGN_IDENTITY="-" \
+  2>&1 | tail -5
 
-echo "📦 Exporting app..."
-
-# Create export options plist
-cat > "${BUILD_DIR}/ExportOptions.plist" << 'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>mac-application</string>
-</dict>
-</plist>
-PLIST
-
-# Export .app from archive
-xcodebuild -exportArchive \
-  -archivePath "${ARCHIVE_PATH}" \
-  -exportOptionsPlist "${BUILD_DIR}/ExportOptions.plist" \
-  -exportPath "${EXPORT_PATH}" \
-  | tail -3
-
-# Zip the .app
-echo "🗜 Creating zip..."
-cd "${EXPORT_PATH}"
-zip -r -y "${ZIP_PATH}" ClaudeBridgeApp.app
-cd "${PROJECT_DIR}"
-
-# Sign with Sparkle EdDSA
-echo "🔑 Signing with EdDSA..."
-SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name sign_update -type f 2>/dev/null | head -1)
-if [ -z "$SIGN_TOOL" ]; then
-  echo "⚠ sign_update not found. Build the project in Xcode first to get Sparkle tools."
-  echo "  Then run: ${SIGN_TOOL:-sign_update} ${ZIP_PATH}"
-  echo ""
-  echo "📄 Zip file ready at: ${ZIP_PATH}"
-  echo "📏 File size: $(wc -c < "${ZIP_PATH}" | tr -d ' ') bytes"
-  exit 0
+# 找到构建出的 .app
+APP_PATH=$(find "${BUILD_DIR}/DerivedData" -name "${APP_NAME}.app" -type d | head -1)
+if [ -z "$APP_PATH" ]; then
+  echo "❌ Build failed - ${APP_NAME}.app not found"
+  exit 1
 fi
 
-SIGN_OUTPUT=$("${SIGN_TOOL}" "${ZIP_PATH}")
+echo "✅ Build succeeded: ${APP_PATH}"
+
+# 压缩
+echo "🗜  Creating zip..."
+cd "$(dirname "$APP_PATH")"
+zip -r -y "${ZIP_PATH}" "${APP_NAME}.app"
+cd "${PROJECT_DIR}"
+
+FILE_LENGTH=$(wc -c < "${ZIP_PATH}" | tr -d ' ')
+echo "📦 Zip: ${ZIP_PATH} (${FILE_LENGTH} bytes)"
+
+# 用 Sparkle EdDSA 签名
+echo ""
+echo "🔑 Signing with Sparkle EdDSA..."
+SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name sign_update -type f 2>/dev/null | head -1)
+
+if [ -z "$SIGN_TOOL" ]; then
+  echo ""
+  echo "⚠️  sign_update 工具未找到！"
+  echo "   请先在 Xcode 中 Build 一次项目，Sparkle 工具会自动下载。"
+  echo "   然后重新运行此脚本。"
+  echo ""
+  echo "   如果已经 Build 过，试试:"
+  echo "   find ~/Library/Developer/Xcode/DerivedData -name sign_update -type f"
+  exit 1
+fi
+
+SIGN_OUTPUT=$("${SIGN_TOOL}" "${ZIP_PATH}" 2>&1)
 echo "${SIGN_OUTPUT}"
 
-# Parse signature and length from output
-ED_SIGNATURE=$(echo "${SIGN_OUTPUT}" | grep 'sparkle:edSignature=' | sed 's/.*sparkle:edSignature="\([^"]*\)".*/\1/')
-FILE_LENGTH=$(wc -c < "${ZIP_PATH}" | tr -d ' ')
+# 解析签名
+ED_SIGNATURE=$(echo "${SIGN_OUTPUT}" | grep -o 'sparkle:edSignature="[^"]*"' | sed 's/sparkle:edSignature="//;s/"//')
 
 echo ""
-echo "✅ Release build complete!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📄 Zip:       ${ZIP_PATH}"
-echo "📏 Size:      ${FILE_LENGTH} bytes"
-echo "🔑 Signature: ${ED_SIGNATURE}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Release v${VERSION} 构建完成！"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📝 Next steps:"
-echo "  1. Update appcast.xml with this item:"
+echo "📋 接下来的步骤:"
 echo ""
-cat << APPCAST
-    <item>
-      <title>Version ${VERSION}</title>
-      <sparkle:version>${BUILD_NUMBER}</sparkle:version>
-      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <pubDate>$(date -R)</pubDate>
-      <enclosure
-        url="https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/download/v${VERSION}/ClaudeBridgeApp.zip"
-        sparkle:edSignature="${ED_SIGNATURE}"
-        length="${FILE_LENGTH}"
-        type="application/octet-stream"
-      />
-    </item>
-APPCAST
+echo "  Step 1: 把下面这段 XML 粘贴到 appcast.xml 的 <channel> 里:"
 echo ""
-echo "  2. Commit appcast.xml and push to main"
-echo "  3. Create GitHub Release v${VERSION} and upload ${ZIP_PATH}"
-
+echo "    <item>"
+echo "      <title>Version ${VERSION}</title>"
+echo "      <sparkle:version>${VERSION}</sparkle:version>"
+echo "      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>"
+echo "      <pubDate>$(date -R)</pubDate>"
+echo "      <enclosure"
+echo "        url=\"https://github.com/xuhaoyuan/${APP_NAME}/releases/download/v${VERSION}/${APP_NAME}.zip\""
+echo "        sparkle:edSignature=\"${ED_SIGNATURE}\""
+echo "        length=\"${FILE_LENGTH}\""
+echo "        type=\"application/octet-stream\""
+echo "      />"
+echo "    </item>"
+echo ""
+echo "  Step 2: 提交并推送 appcast.xml"
+echo "    git add appcast.xml && git commit -m 'Update appcast for v${VERSION}' && git push"
+echo ""
+echo "  Step 3: 在 GitHub 创建 Release"
+echo "    打开: https://github.com/xuhaoyuan/${APP_NAME}/releases/new"
+echo "    Tag: v${VERSION}"
+echo "    上传: ${ZIP_PATH}"
+echo ""
