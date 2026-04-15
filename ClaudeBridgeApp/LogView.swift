@@ -25,12 +25,19 @@ struct LogView: View {
             // Log content
             ScrollViewReader { scrollProxy in
                 ScrollView {
-                    Text(proxy.logs.isEmpty ? "No logs yet." : proxy.logs)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .textSelection(.enabled)
-                        .foregroundStyle(proxy.logs.isEmpty ? .secondary : .primary)
+                    if proxy.logs.isEmpty {
+                        Text("No logs yet.")
+                            .font(.system(.body, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(verbatim: proxy.logs)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                            .textSelection(.enabled)
+                    }
 
                     Color.clear
                         .frame(height: 1)

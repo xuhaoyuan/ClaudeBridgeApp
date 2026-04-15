@@ -40,5 +40,43 @@ enum ClaudeSettingsManager {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try? data.write(to: settingsURL, options: .atomic)
     }
+
+    /// Remove all proxy-related fields from ~/.claude/settings.json,
+    /// restoring it to a clean state while preserving other user settings.
+    static func restore() {
+        guard let data = try? Data(contentsOf: settingsURL),
+              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return
+        }
+
+        // Remove proxy env keys
+        let proxyEnvKeys = [
+            "ANTHROPIC_BASE_URL",
+            "ANTHROPIC_API_KEY",
+            "CLAUDE_MODEL",
+            "ANTHROPIC_SMALL_FAST_MODEL",
+        ]
+        if var env = json["env"] as? [String: String] {
+            for key in proxyEnvKeys {
+                env.removeValue(forKey: key)
+            }
+            if env.isEmpty {
+                json.removeValue(forKey: "env")
+            } else {
+                json["env"] = env
+            }
+        }
+
+        // Remove top-level model fields we wrote
+        json.removeValue(forKey: "model")
+        json.removeValue(forKey: "smallModel")
+
+        // Write back
+        guard let output = try? JSONSerialization.data(
+            withJSONObject: json,
+            options: [.prettyPrinted, .sortedKeys]
+        ) else { return }
+        try? output.write(to: settingsURL, options: .atomic)
+    }
 }
 

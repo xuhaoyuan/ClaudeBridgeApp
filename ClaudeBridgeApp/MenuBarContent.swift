@@ -17,6 +17,14 @@ struct MenuBarContent: View {
 
         Divider()
 
+        // MARK: Warnings
+        if !proxy.isInstalled {
+            Label("⚠ copilot-api not installed", systemImage: "exclamationmark.triangle")
+        }
+        if !settings.isModelSelected && settings.hasCompletedSetup {
+            Label("⚠ Models not configured", systemImage: "exclamationmark.triangle")
+        }
+
         // MARK: Controls
         controlsSection
 
@@ -31,6 +39,17 @@ struct MenuBarContent: View {
         loginSection
 
         Divider()
+
+        // MARK: Setup
+        if !settings.hasCompletedSetup {
+            Button {
+                openWindow(id: "setup")
+                NSApp.activate()
+            } label: {
+                Label("Setup Wizard...", systemImage: "wand.and.stars")
+            }
+            Divider()
+        }
 
         // MARK: Quit
         Button {
@@ -74,7 +93,7 @@ struct MenuBarContent: View {
             } label: {
                 Label("Start", systemImage: "play.fill")
             }
-            .disabled(!proxy.isInstalled || !isLoggedIn)
+            .disabled(!proxy.isInstalled || !isLoggedIn || !settings.isModelSelected)
         }
 
         Button {
@@ -101,7 +120,7 @@ struct MenuBarContent: View {
         } label: {
             Label("Copy Claude Command", systemImage: "doc.on.clipboard")
         }
-        .disabled(!isLoggedIn)
+        .disabled(!isLoggedIn || !settings.isModelSelected)
 
         Button {
             let urlString = "https://ericc-ch.github.io/copilot-api?endpoint=http://localhost:\(settings.port)/usage"
@@ -133,7 +152,7 @@ struct MenuBarContent: View {
         if let user = proxy.loginUser {
             Label("Login: \(user)", systemImage: "person.crop.circle.badge.checkmark")
             Button {
-                proxy.logout()
+                proxy.logout(clearSettings: settings)
             } label: {
                 Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
             }
@@ -154,8 +173,8 @@ struct MenuBarContent: View {
 
     private func sendCopiedNotification() {
         let content = UNMutableNotificationContent()
-        content.title = "Copilot API Proxy"
-        content.body = "Command copied to clipboard"
+        content.title = String(localized: "Copilot API Proxy")
+        content.body = String(localized: "Command copied to clipboard")
         content.sound = .default
         let request = UNNotificationRequest(
             identifier: "command-copied",

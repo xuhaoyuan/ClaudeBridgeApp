@@ -26,6 +26,13 @@ final class ProxyManager {
     var loginDeviceCode: String?
     var loginDeviceURL: String?
 
+    // Install flow state
+    var isInstalling: Bool = false
+    var installOutput: String = ""
+
+    // Model fetch state
+    var isFetchingModels: Bool = false
+
     var isRunning: Bool {
         if case .running = state { return true }
         return false
@@ -101,6 +108,69 @@ final class ProxyManager {
     }
 
     // MARK: - Process Control
+
+    /// Synchronously re-check known paths for copilot-api, then kick off async shell lookup.
+    func recheckInstallation() {
+        let knownPaths = [
+            "/opt/homebrew/bin/copilot-api",
+            "/usr/local/bin/copilot-api",
+        ]
+        for path in knownPaths {
+            if FileManager.default.fileExists(atPath: path) {
+                cachedExecutablePath = path
+                return
+            }
+        }
+        resolveExecutablePath()
+    }
+
+    /// One-click install via npm
+    func installCopilotApi() {
+        guard !isInstalling else { return }
+        isInstalling = true
+        installOutput = ""
+
+        Task.detached { [weak self] in
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            proc.arguments = ["-l", "-c", "npm install -g copilot-api"]
+
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+
+            pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+                let data = handle.availableData
+                guard !data.isEmpty, let str = String(data: data, encoding: .utf8) else { return }
+                Task { @MainActor [weak self] in
+                    self?.installOutput += str
+                }
+            }
+
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                pipe.fileHandleForReading.readabilityHandler = nil
+
+                let success = proc.terminationStatus == 0
+                await MainActor.run {
+                    self?.isInstalling = false
+                    self?.recheckInstallation()
+                    if success {
+                        self?.appendLog("copilot-api installed successfully")
+                    } else {
+                        self?.appendLog("copilot-api installation failed (exit \(proc.terminationStatus))")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isInstalling = false
+                    self?.installOutput += "\nError: \(error.localizedDescription)"
+                    self?.appendLog("Failed to install copilot-api: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
 
     func start(settings: SettingsStore) {
         guard process == nil || process?.isRunning != true else { return }
@@ -219,6 +289,9 @@ final class ProxyManager {
                     if !self.modelsFetched {
                         self.modelsFetched = true
                         self.fetchModels(port: port)
+                    } else if self.availableModels.isEmpty {
+                        // Previous fetch failed — retry
+                        self.fetchModels(port: port)
                     }
                 } else if self.process?.isRunning == true {
                     // Process is alive but HTTP failed
@@ -238,22 +311,36 @@ final class ProxyManager {
     // MARK: - Models (dynamic from /v1/models)
 
     func fetchModels(port: String) {
+        guard !isFetchingModels else { return }
         guard let url = URL(string: "http://localhost:\(port)/v1/models") else { return }
 
+        isFetchingModels = true
+        appendLog("Fetching models from server...")
+
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let data, error == nil else { return }
-            do {
-                let response = try JSONDecoder().decode(ModelsResponse.self, from: data)
-                let chatModels = CopilotModel.filterChatModels(response.data)
-                Task { @MainActor [weak self] in
-                    if !chatModels.isEmpty {
-                        self?.availableModels = chatModels
-                        self?.appendLog("Fetched \(chatModels.count) models from server")
-                    }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isFetchingModels = false
+
+                if let error {
+                    self.appendLog("Failed to fetch models: \(error.localizedDescription)")
+                    return
                 }
-            } catch {
-                Task { @MainActor [weak self] in
-                    self?.appendLog("Failed to parse models: \(error.localizedDescription)")
+                guard let data else {
+                    self.appendLog("Failed to fetch models: no data")
+                    return
+                }
+                do {
+                    let response = try JSONDecoder().decode(ModelsResponse.self, from: data)
+                    let chatModels = CopilotModel.filterChatModels(response.data)
+                    if !chatModels.isEmpty {
+                        self.availableModels = chatModels
+                        self.appendLog("Fetched \(chatModels.count) models from server")
+                    } else {
+                        self.appendLog("Server returned 0 chat models")
+                    }
+                } catch {
+                    self.appendLog("Failed to parse models: \(error.localizedDescription)")
                 }
             }
         }.resume()
@@ -406,7 +493,7 @@ final class ProxyManager {
         loginDeviceURL = nil
     }
 
-    func logout() {
+    func logout(clearSettings settings: SettingsStore? = nil) {
         // Stop proxy first — it needs the token to function
         stop()
         // Delete token file
@@ -417,6 +504,11 @@ final class ProxyManager {
         loginUser = nil
         detectedPlan = nil
         availableModels = []
+        // Clear model selections so UI resets to "Select a model..."
+        if let settings {
+            settings.claudeModel = ""
+            settings.smallModel = ""
+        }
         appendLog("Logged out (token removed)")
     }
 

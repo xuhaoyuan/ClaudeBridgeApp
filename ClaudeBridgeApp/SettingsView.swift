@@ -4,15 +4,17 @@ struct SettingsView: View {
     var settings: SettingsStore
     var proxy: ProxyManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openWindow) private var openWindow
 
     // MARK: - Draft State (local copies, not saved until Apply/OK)
 
     @State private var draftPort: String = ""
     @State private var draftAutoStart: Bool = true
     @State private var draftLaunchAtLogin: Bool = false
-    @State private var draftClaudeModel: String = "claude-sonnet-4.6"
-    @State private var draftSmallModel: String = "claude-sonnet-4.6"
+    @State private var draftClaudeModel: String = ""
+    @State private var draftSmallModel: String = ""
     @State private var draftAccountType: String = "individual"
+    @State private var showRestoredAlert: Bool = false
 
     private var portIsValid: Bool {
         guard let port = Int(draftPort) else { return false }
@@ -31,7 +33,7 @@ struct SettingsView: View {
     /// Model options: dynamic list, always includes current draft selections
     private var modelOptions: [CopilotModel] {
         var models = proxy.availableModels
-        for id in [draftClaudeModel, draftSmallModel] {
+        for id in [draftClaudeModel, draftSmallModel] where !id.isEmpty {
             if !models.contains(where: { $0.id == id }) {
                 models.append(CopilotModel(id: id, ownedBy: "", displayName: id))
             }
@@ -60,24 +62,38 @@ struct SettingsView: View {
 
                 Section {
                     Picker("Claude Model", selection: $draftClaudeModel) {
+                        Text("Select a model...").tag("")
                         ForEach(modelOptions) { model in
                             Text(model.displayName).tag(model.id)
                         }
                     }
                     Picker("Small / Fast Model", selection: $draftSmallModel) {
+                        Text("Select a model...").tag("")
                         ForEach(modelOptions) { model in
                             Text(model.displayName).tag(model.id)
                         }
+                    }
+                    if draftClaudeModel.isEmpty || draftSmallModel.isEmpty {
+                        Label("Both models must be selected", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                     }
                     if proxy.availableModels.isEmpty {
                         Text("Start proxy to load model list, or refresh manually")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    Text("⚠ Please select Claude models. Non-Claude models may cause Claude Code to malfunction.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 } header: {
                     HStack {
                         Text("Model")
                         Spacer()
+                        if proxy.isFetchingModels {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
                         Button {
                             proxy.fetchModels(port: draftPort.isEmpty ? settings.port : draftPort)
                         } label: {
@@ -85,7 +101,7 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                         .buttonStyle(.borderless)
-                        .disabled(!proxy.isRunning)
+                        .disabled(!proxy.isRunning || proxy.isFetchingModels)
                         .help(proxy.isRunning ? "Refresh model list from server" : "Proxy must be running")
                     }
                 }
@@ -124,6 +140,17 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
+                    LabeledContent("Claude Config") {
+                        Button {
+                            ClaudeSettingsManager.restore()
+                            showRestoredAlert = true
+                        } label: {
+                            Label("Restore Defaults", systemImage: "arrow.uturn.backward")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove proxy settings from ~/.claude/settings.json")
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -132,7 +159,16 @@ struct SettingsView: View {
 
             // MARK: - Action Buttons
             HStack {
+                Button {
+                    dismiss()
+                    openWindow(id: "setup")
+                    NSApp.activate()
+                } label: {
+                    Label("Reconfigure...", systemImage: "wand.and.stars")
+                }
+
                 Spacer()
+
                 Button("Cancel") {
                     dismiss()
                 }
@@ -156,6 +192,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .onAppear {
             loadDraft()
+        }
+        .alert("Claude Settings Restored", isPresented: $showRestoredAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Proxy-related settings have been removed from ~/.claude/settings.json. Claude Code will use its default configuration.")
         }
     }
 

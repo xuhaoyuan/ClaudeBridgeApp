@@ -14,6 +14,7 @@ struct ClaudeBridgeAppApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var settings = SettingsStore()
     @State private var proxy = ProxyManager()
+    @Environment(\.openWindow) private var openWindow
 
     // Sparkle updater
     private let updaterController = SPUStandardUpdaterController(
@@ -33,7 +34,10 @@ struct ClaudeBridgeAppApp: App {
                 .task {
                     // One-time setup when the menu bar extra is created
                     proxy.checkCopilotInfo(autoFillSettings: settings)
-                    if settings.autoStart && !proxy.isRunning {
+                    if !settings.hasCompletedSetup {
+                        openWindow(id: "setup")
+                        NSApp.activate()
+                    } else if settings.autoStart && !proxy.isRunning {
                         proxy.start(settings: settings)
                     }
                 }
@@ -41,6 +45,12 @@ struct ClaudeBridgeAppApp: App {
             menuBarIcon
         }
         .menuBarExtraStyle(.menu)
+
+        // MARK: Setup Wizard
+        Window("Setup", id: "setup") {
+            SetupView(settings: settings, proxy: proxy)
+        }
+        .windowResizability(.contentSize)
 
         // MARK: Settings Window
         Window("Settings", id: "settings") {
