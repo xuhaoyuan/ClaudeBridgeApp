@@ -5,26 +5,18 @@
     <link>https://github.com/xuhaoyuan/ClaudeBridgeApp/releases</link>
     <description>Most recent updates to ClaudeBridgeApp</description>
     <language>en</language>
-    <!--
     <item>
-      <title>Version 1.1.0</title>
-      <sparkle:version>2</sparkle:version>
-      <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <ul>
-          <li>Bug fixes and improvements</li>
-        </ul>
-      ]]></description>
-      <pubDate>Wed, 16 Apr 2026 00:00:00 +0000</pubDate>
+      <title>Version 1.0.0</title>
+      <sparkle:version>1.0.0</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <pubDate>Wed, 15 Apr 2026 17:29:58 +0800</pubDate>
       <enclosure
-        url="https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/download/v1.1.0/ClaudeBridgeApp.zip"
-        sparkle:edSignature="SIGNATURE_HERE"
-        length="FILE_SIZE_HERE"
+        url="https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/download/v1.0.0/ClaudeBridgeApp.zip"
+        sparkle:edSignature="L006DlHWSvZZwFGjCO9+vDBxYvmWAV8P4ovQaWhYxkcQaGtrg2w11a1PsABh5+FwI9ArvvIHiSDBlMpBtmNmAA=="
+        length="1129945"
         type="application/octet-stream"
       />
     </item>
-    -->
   </channel>
 </rss>
 

@@ -5,7 +5,7 @@
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/xuhaoyuan/ClaudeBridgeApp/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_YOUR_PUBLIC_ED_KEY</string>
+	<string>Vflw5toqLvLRMovPQoyGqBtrokk8Uiyw980KRrTXqDU=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 </dict>
