@@ -1,0 +1,44 @@
+import Foundation
+
+/// Manages reading and writing ~/.claude/settings.json
+/// Merges proxy-related fields while preserving existing user settings (e.g. permissions).
+enum ClaudeSettingsManager {
+
+    private static var settingsURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/settings.json")
+    }
+
+    static func update(port: String, model: String, smallModel: String) {
+        var existing: [String: Any] = [:]
+
+        // Read existing file
+        if let data = try? Data(contentsOf: settingsURL),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            existing = json
+        }
+
+        // Merge env
+        var env = existing["env"] as? [String: String] ?? [:]
+        env["ANTHROPIC_BASE_URL"] = "http://localhost:\(port)"
+        env["ANTHROPIC_API_KEY"] = "copilot"
+        env["CLAUDE_MODEL"] = model
+        env["ANTHROPIC_SMALL_FAST_MODEL"] = smallModel
+        existing["env"] = env
+
+        // Update top-level model fields
+        existing["model"] = model
+        existing["smallModel"] = smallModel
+
+        // Write back
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: existing,
+            options: [.prettyPrinted, .sortedKeys]
+        ) else { return }
+
+        let dir = settingsURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? data.write(to: settingsURL, options: .atomic)
+    }
+}
+
