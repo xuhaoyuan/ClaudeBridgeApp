@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		51D9AE122F8F8E2400305CF5 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 51D9ADB12F8F700000305CF5 /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		51D9ADA22F8F6CA300305CF5 /* ClaudeBridgeApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeBridgeApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51D9AE122F8F8E2400305CF5 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = ClaudeBridgeApp;
 			packageProductDependencies = (
+				51D9ADB12F8F700000305CF5 /* Sparkle */,
 			);
 			productName = ClaudeBridgeApp;
 			productReference = 51D9ADA22F8F6CA300305CF5 /* ClaudeBridgeApp.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 51D9AD992F8F6CA300305CF5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				51D9ADB02F8F700000305CF5 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 51D9ADA32F8F6CA300305CF5 /* Products */;
 			projectDirPath = "";
@@ -254,6 +263,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClaudeBridgeApp/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -284,6 +294,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClaudeBridgeApp/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -325,6 +336,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		51D9ADB02F8F700000305CF5 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		51D9ADB12F8F700000305CF5 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 51D9ADB02F8F700000305CF5 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 51D9AD9A2F8F6CA300305CF5 /* Project object */;
 }

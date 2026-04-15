@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>ClaudeBridgeApp Updates</title>
+    <link>https://github.com/xuhaoyuan/ClaudeBridgeApp/releases</link>
+    <description>Most recent updates to ClaudeBridgeApp</description>
+    <language>en</language>
+    <!--
+    <item>
+      <title>Version 1.1.0</title>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li>Bug fixes and improvements</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 16 Apr 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/download/v1.1.0/ClaudeBridgeApp.zip"
+        sparkle:edSignature="SIGNATURE_HERE"
+        length="FILE_SIZE_HERE"
+        type="application/octet-stream"
+      />
+    </item>
+    -->
+  </channel>
+</rss>
+

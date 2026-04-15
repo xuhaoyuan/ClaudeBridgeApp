@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
 import UserNotifications
+import Sparkle
 
 struct MenuBarContent: View {
     var settings: SettingsStore
     var proxy: ProxyManager
+    var updater: SPUUpdater
     @Environment(\.openWindow) private var openWindow
 
     private var isLoggedIn: Bool { proxy.isLoggedIn }
@@ -117,6 +119,13 @@ struct MenuBarContent: View {
         } label: {
             Label("View Logs", systemImage: "doc.text")
         }
+
+        Button {
+            updater.checkForUpdates()
+        } label: {
+            Label("Check for Updates...", systemImage: "arrow.down.circle")
+        }
+        .disabled(!updater.canCheckForUpdates)
     }
 
     @ViewBuilder

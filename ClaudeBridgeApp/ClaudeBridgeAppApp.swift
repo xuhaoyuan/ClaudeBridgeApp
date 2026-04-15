@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UserNotifications
+import Sparkle
 
 @main
 struct ClaudeBridgeAppApp: App {
@@ -14,10 +15,21 @@ struct ClaudeBridgeAppApp: App {
     @State private var settings = SettingsStore()
     @State private var proxy = ProxyManager()
 
+    // Sparkle updater
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
+
     var body: some Scene {
         // MARK: Menu Bar
         MenuBarExtra {
-            MenuBarContent(settings: settings, proxy: proxy)
+            MenuBarContent(
+                settings: settings,
+                proxy: proxy,
+                updater: updaterController.updater
+            )
                 .task {
                     // One-time setup when the menu bar extra is created
                     proxy.checkCopilotInfo(autoFillSettings: settings)
