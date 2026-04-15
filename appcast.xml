@@ -6,6 +6,18 @@
     <description>Most recent updates to ClaudeBridgeApp</description>
     <language>en</language>
     <item>
+      <title>Version 1.1.0</title>
+      <sparkle:version>1.1.0</sparkle:version>
+      <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+      <pubDate>Wed, 15 Apr 2026 22:08:12 +0800</pubDate>
+      <enclosure
+        url="https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/download/v1.1.0/ClaudeBridgeApp.zip"
+        sparkle:edSignature="MICmcTowLwfB13zxlvNMX0YEjo9zL1O9GKPCpDYffhnTL6f2uc9K+Vo6EGBosPSpi7jw5ohTIgkOEB56jk32BA=="
+        length="1313356"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
       <title>Version 1.0.0</title>
       <sparkle:version>1.0.0</sparkle:version>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
