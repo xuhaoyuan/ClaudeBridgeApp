@@ -1,9 +1,9 @@
-# ClaudeBridgeApp
+# ClaudeBridge
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png">
-    <img src="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="ClaudeBridgeApp Icon">
+    <img src="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="ClaudeBridge Icon">
   </picture>
 </p>
 
@@ -37,7 +37,7 @@ macOS 菜单栏应用，管理 [copilot-api](https://github.com/ericc-ch/copilot
 
 ### 方式一：下载安装（推荐）
 
-1. 前往 [Releases](https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/latest) 下载最新版 `ClaudeBridgeApp.zip`
+1. 前往 [Releases](https://github.com/xuhaoyuan/ClaudeBridgeApp/releases/latest) 下载最新版 `ClaudeBridge.zip`
 2. 解压后拖入 `/Applications`
 3. 启动 App，按照 Setup Wizard 引导完成配置
 

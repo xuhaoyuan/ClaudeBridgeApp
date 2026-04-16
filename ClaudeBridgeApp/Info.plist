@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>ClaudeBridge</string>
+	<key>CFBundleName</key>
+	<string>ClaudeBridge</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/xuhaoyuan/ClaudeBridgeApp/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
