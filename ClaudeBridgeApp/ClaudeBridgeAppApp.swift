@@ -36,7 +36,7 @@ struct ClaudeBridgeAppApp: App {
                     proxy.checkCopilotInfo(autoFillSettings: settings)
                     if !settings.hasCompletedSetup {
                         openWindow(id: "setup")
-                        NSApp.activate()
+                        activateAppAndWindows()
                     } else if settings.autoStart && !proxy.isRunning {
                         proxy.start(settings: settings)
                     }
@@ -98,5 +98,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         // Cleanup is handled by ProxyManager
+    }
+}
+
+// MARK: - Window Activation Helper
+
+/// Brings the app and its windows to the front, even for menu-bar-only apps.
+func activateAppAndWindows() {
+    NSApp.activate(ignoringOtherApps: true)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        // Only bring our own titled windows to front, skip Sparkle/system windows
+        let knownTitles: Set<String> = ["Setup", "Settings", "Logs", "Login"]
+        for window in NSApp.windows where window.isVisible && knownTitles.contains(window.title) {
+            window.orderFrontRegardless()
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 }

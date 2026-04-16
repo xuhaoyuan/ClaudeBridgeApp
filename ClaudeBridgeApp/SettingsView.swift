@@ -47,7 +47,7 @@ struct SettingsView: View {
                 Section("Proxy") {
                     HStack {
                         Text("Port")
-                        TextField("Port", text: $draftPort)
+                        TextField("", text: $draftPort)
                             .frame(width: 80)
                             .multilineTextAlignment(.trailing)
                         if !draftPort.isEmpty && !portIsValid {
@@ -162,7 +162,7 @@ struct SettingsView: View {
                 Button {
                     dismiss()
                     openWindow(id: "setup")
-                    NSApp.activate()
+                    activateAppAndWindows()
                 } label: {
                     Label("Reconfigure...", systemImage: "wand.and.stars")
                 }

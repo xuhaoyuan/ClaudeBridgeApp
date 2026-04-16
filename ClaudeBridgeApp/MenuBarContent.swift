@@ -44,7 +44,7 @@ struct MenuBarContent: View {
         if !settings.hasCompletedSetup {
             Button {
                 openWindow(id: "setup")
-                NSApp.activate()
+                activateAppAndWindows()
             } label: {
                 Label("Setup Wizard...", systemImage: "wand.and.stars")
             }
@@ -108,7 +108,7 @@ struct MenuBarContent: View {
     private var toolsSection: some View {
         Button {
             openWindow(id: "settings")
-            NSApp.activate()
+            activateAppAndWindows()
         } label: {
             Label("Settings...", systemImage: "gearshape")
         }
@@ -134,7 +134,7 @@ struct MenuBarContent: View {
 
         Button {
             openWindow(id: "logs")
-            NSApp.activate()
+            activateAppAndWindows()
         } label: {
             Label("View Logs", systemImage: "doc.text")
         }
@@ -161,7 +161,7 @@ struct MenuBarContent: View {
             Button {
                 proxy.login()
                 openWindow(id: "login")
-                NSApp.activate()
+                activateAppAndWindows()
             } label: {
                 Label("Login...", systemImage: "person.badge.plus")
             }
