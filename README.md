@@ -94,7 +94,7 @@ App 会自动在 `~/.claude/settings.json` 中写入以下配置：
 
 ## ⚙️ Requirements
 
-- macOS 13+
+- macOS 14+
 - [Node.js](https://nodejs.org/) (用于安装 copilot-api)
 - [copilot-api](https://github.com/ericc-ch/copilot-api)
 - GitHub Copilot 订阅
