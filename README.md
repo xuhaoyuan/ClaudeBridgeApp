@@ -1,7 +1,10 @@
 # ClaudeBridgeApp
 
 <p align="center">
-  <img src="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="ClaudeBridgeApp Icon">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png">
+    <img src="ClaudeBridgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="ClaudeBridgeApp Icon">
+  </picture>
 </p>
 
 macOS 菜单栏应用，管理 [copilot-api](https://github.com/ericc-ch/copilot-api) 代理服务。通过 GitHub Copilot 订阅为 Claude Code 提供 API 代理。
@@ -29,8 +32,6 @@ macOS 菜单栏应用，管理 [copilot-api](https://github.com/ericc-ch/copilot
 ① Install  →  ② Login  →  ③ Models  →  ④ Ready
 ```
 
-### Menu Bar
-<img width="200" alt="menubar" src="https://github.com/user-attachments/assets/placeholder">
 
 ## 🚀 Getting Started
 
