@@ -4,6 +4,8 @@ import AppKit
 struct LoginView: View {
     var proxy: ProxyManager
     @Environment(\.dismiss) private var dismiss
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
 
     var body: some View {
         VStack(spacing: 20) {
@@ -84,9 +86,23 @@ struct LoginView: View {
         .padding(30)
         .frame(width: 400)
         .fixedSize()
+        .alert("Login Failed", isPresented: $showErrorAlert) {
+            Button("OK") {
+                showErrorAlert = false
+            }
+        } message: {
+            Text(errorMessage)
+        }
+        .onChange(of: proxy.loginError) { _, newError in
+            if let error = newError {
+                errorMessage = error
+                showErrorAlert = true
+                proxy.loginError = nil
+            }
+        }
         .onChange(of: proxy.isLoggingIn) { old, new in
-            // Auto-close when auth completes
-            if old == true && new == false {
+            // Auto-close when auth completes successfully (no error)
+            if old == true && new == false && proxy.loginError == nil {
                 // Brief delay so checkCopilotInfo can run
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     dismiss()

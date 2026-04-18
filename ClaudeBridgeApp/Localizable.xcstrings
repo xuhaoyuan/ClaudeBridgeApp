@@ -333,6 +333,9 @@
         }
       }
     },
+    "Environment Setup" : {
+
+    },
     "Fetching models from server..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -374,6 +377,7 @@
       }
     },
     "Install copilot-api" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -382,6 +386,9 @@
           }
         }
       }
+    },
+    "Install Node.js" : {
+
     },
     "Installed" : {
       "localizations" : {
@@ -402,6 +409,9 @@
           }
         }
       }
+    },
+    "Installing Node.js via Homebrew..." : {
+
     },
     "Launch at Login" : {
       "localizations" : {
@@ -438,6 +448,9 @@
           }
         }
       }
+    },
+    "Login Failed" : {
+
     },
     "Login to GitHub Copilot" : {
       "localizations" : {
@@ -542,6 +555,15 @@
         }
       }
     },
+    "Node.js %@" : {
+
+    },
+    "Node.js %@ — version too old!" : {
+
+    },
+    "Node.js not found" : {
+
+    },
     "Not Found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -596,6 +618,7 @@
       }
     },
     "Or install manually in Terminal:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -604,6 +627,9 @@
           }
         }
       }
+    },
+    "Or install manually:" : {
+
     },
     "Path" : {
       "localizations" : {
@@ -616,6 +642,9 @@
       }
     },
     "Plan: %@" : {
+
+    },
+    "Please install Node.js first." : {
 
     },
     "Please select Claude models. Non-Claude models may cause Claude Code to malfunction." : {
@@ -702,6 +731,7 @@
       }
     },
     "Re-check" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -710,6 +740,9 @@
           }
         }
       }
+    },
+    "Re-check All" : {
+
     },
     "Ready" : {
       "localizations" : {
@@ -780,6 +813,12 @@
           }
         }
       }
+    },
+    "Requires Node.js v20.5.0 or later." : {
+
+    },
+    "Requires Node.js v20.5.0+." : {
+
     },
     "Restart" : {
       "localizations" : {
@@ -993,6 +1032,9 @@
           }
         }
       }
+    },
+    "Upgrade Node.js" : {
+
     },
     "Usage Viewer" : {
       "localizations" : {

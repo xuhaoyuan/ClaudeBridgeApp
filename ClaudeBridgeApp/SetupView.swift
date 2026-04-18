@@ -10,12 +10,14 @@ struct SetupView: View {
     @State private var selectedClaudeModel = ""
     @State private var selectedSmallModel = ""
     @State private var proxyStartedForModels = false
+    @State private var showLoginErrorAlert = false
+    @State private var loginErrorMessage = ""
 
     private let totalSteps = 4
 
     private var canProceed: Bool {
         switch currentStep {
-        case 0: return proxy.isInstalled
+        case 0: return proxy.isInstalled && proxy.isNodeVersionOK
         case 1: return proxy.isLoggedIn
         case 2: return !selectedClaudeModel.isEmpty && !selectedSmallModel.isEmpty
         case 3: return true
@@ -166,7 +168,7 @@ struct SetupView: View {
 
     private func isStepComplete(_ step: Int) -> Bool {
         switch step {
-        case 0: return proxy.isInstalled
+        case 0: return proxy.isInstalled && proxy.isNodeVersionOK
         case 1: return proxy.isLoggedIn
         case 2: return !selectedClaudeModel.isEmpty && !selectedSmallModel.isEmpty
         case 3: return false
@@ -179,84 +181,210 @@ struct SetupView: View {
     @ViewBuilder
     private var installStep: some View {
         VStack(spacing: 20) {
-            Label("Install copilot-api", systemImage: "shippingbox")
+            Label("Environment Setup", systemImage: "shippingbox")
                 .font(.title3.bold())
 
-            if proxy.isInstalled {
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.green)
-                    Text("copilot-api is installed")
-                        .foregroundStyle(.secondary)
-                    Text(proxy.executablePath)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
-                }
-            } else if proxy.isInstalling {
-                VStack(spacing: 12) {
+            // --- Node.js ---
+            nodeVersionBadge
+
+            Divider()
+
+            // --- copilot-api ---
+            copilotApiBadge
+
+            Divider()
+
+            // Unified re-check button
+            Button {
+                proxy.checkNodeVersion()
+                proxy.recheckInstallation()
+            } label: {
+                Label("Re-check All", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .onAppear {
+            proxy.checkNodeVersion()
+        }
+    }
+
+    // MARK: - Node.js Badge
+
+    @ViewBuilder
+    private var nodeVersionBadge: some View {
+        if proxy.isInstallingNode {
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ProgressView()
-                        .controlSize(.large)
-                    Text("Installing copilot-api via npm...")
+                        .controlSize(.small)
+                    Text("Installing Node.js via Homebrew...")
                         .foregroundStyle(.secondary)
-                    if !proxy.installOutput.isEmpty {
-                        ScrollView {
-                            Text(proxy.installOutput)
-                                .font(.system(.caption, design: .monospaced))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .textSelection(.enabled)
-                        }
-                        .frame(maxHeight: 120)
-                        .padding(8)
-                        .background(.quinary, in: RoundedRectangle(cornerRadius: 6))
-                    }
                 }
-            } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.red)
-                    Text("copilot-api is not installed")
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        Button {
-                            proxy.installCopilotApi()
-                        } label: {
-                            Label("One-Click Install", systemImage: "arrow.down.circle")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        Button {
-                            proxy.recheckInstallation()
-                        } label: {
-                            Label("Re-check", systemImage: "arrow.clockwise")
-                        }
+                .font(.caption)
+                if !proxy.nodeInstallOutput.isEmpty {
+                    ScrollView {
+                        Text(proxy.nodeInstallOutput)
+                            .font(.system(.caption2, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
                     }
-                    VStack(spacing: 6) {
-                        Text("Or install manually in Terminal:")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 8) {
-                            Text("npm install -g copilot-api")
-                                .font(.system(.caption, design: .monospaced))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.quinary, in: RoundedRectangle(cornerRadius: 4))
-                                .textSelection(.enabled)
-                            Button {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString("npm install -g copilot-api", forType: .string)
-                            } label: {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.borderless)
-                            .help("Copy command")
-                        }
-                    }
-                    .padding(.top, 4)
+                    .frame(maxHeight: 80)
+                    .padding(6)
+                    .background(.quinary, in: RoundedRectangle(cornerRadius: 6))
                 }
             }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(.blue.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        } else if let version = proxy.nodeVersion {
+            if proxy.isNodeVersionOK {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text("Node.js \(version)")
+                }
+                .font(.callout)
+            } else {
+                VStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                        Text("Node.js \(version) — version too old!")
+                            .foregroundStyle(.red)
+                    }
+                    .font(.callout)
+                    Text("Requires Node.js v20.5.0 or later.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        proxy.installNode()
+                    } label: {
+                        Label("Upgrade Node.js", systemImage: "arrow.up.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity)
+                .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            }
+        } else {
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text("Node.js not found")
+                        .foregroundStyle(.red)
+                }
+                .font(.callout)
+                Text("Requires Node.js v20.5.0+.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button {
+                    proxy.installNode()
+                } label: {
+                    Label("Install Node.js", systemImage: "arrow.down.circle")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    // MARK: - copilot-api Badge
+
+    @ViewBuilder
+    private var copilotApiBadge: some View {
+        if proxy.isInstalled {
+            VStack(spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text("copilot-api is installed")
+                }
+                .font(.callout)
+                Text(proxy.executablePath)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
+            }
+        } else if proxy.isInstalling {
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Installing copilot-api via npm...")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+                if !proxy.installOutput.isEmpty {
+                    ScrollView {
+                        Text(proxy.installOutput)
+                            .font(.system(.caption2, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 100)
+                    .padding(6)
+                    .background(.quinary, in: RoundedRectangle(cornerRadius: 6))
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(.blue.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        } else {
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text("copilot-api is not installed")
+                        .foregroundStyle(.red)
+                }
+                .font(.callout)
+                Button {
+                    proxy.installCopilotApi()
+                } label: {
+                    Label("One-Click Install", systemImage: "arrow.down.circle")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(!proxy.isNodeVersionOK)
+                if !proxy.isNodeVersionOK {
+                    Text("Please install Node.js first.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                VStack(spacing: 4) {
+                    Text("Or install manually:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("npm install -g copilot-api")
+                            .font(.system(.caption, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.quinary, in: RoundedRectangle(cornerRadius: 4))
+                            .textSelection(.enabled)
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString("npm install -g copilot-api", forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Copy command")
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
         }
     }
 
@@ -308,6 +436,20 @@ struct SetupView: View {
                     }
                     .buttonStyle(.borderedProminent)
                 }
+            }
+        }
+        .alert("Login Failed", isPresented: $showLoginErrorAlert) {
+            Button("OK") {
+                showLoginErrorAlert = false
+            }
+        } message: {
+            Text(loginErrorMessage)
+        }
+        .onChange(of: proxy.loginError) { _, newError in
+            if let error = newError {
+                loginErrorMessage = error
+                showLoginErrorAlert = true
+                proxy.loginError = nil
             }
         }
     }

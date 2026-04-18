@@ -25,6 +25,13 @@ final class ProxyManager {
     var isLoggingIn: Bool = false
     var loginDeviceCode: String?
     var loginDeviceURL: String?
+    var loginError: String?
+
+    // Node.js version state
+    var nodeVersion: String?
+    var isNodeVersionOK: Bool = false
+    var isInstallingNode: Bool = false
+    var nodeInstallOutput: String = ""
 
     // Install flow state
     var isInstalling: Bool = false
@@ -210,8 +217,14 @@ final class ProxyManager {
         proc.terminationHandler = { [weak self] p in
             Task { @MainActor [weak self] in
                 self?.outputPipe?.fileHandleForReading.readabilityHandler = nil
-                self?.appendLog("Process exited with code \(p.terminationStatus)")
-                self?.state = .stopped
+                let hint = Self.diagnoseProcessError(self?.logs ?? "")
+                if p.terminationStatus != 0 && !hint.isEmpty {
+                    self?.appendLog("Process exited with code \(p.terminationStatus): \(hint)")
+                    self?.state = .error(hint)
+                } else {
+                    self?.appendLog("Process exited with code \(p.terminationStatus)")
+                    self?.state = .stopped
+                }
                 self?.process = nil
                 self?.stopHealthCheck()
             }
@@ -436,10 +449,15 @@ final class ProxyManager {
             proc.standardOutput = pipe
             proc.standardError = pipe
 
+            // Accumulate output for error detection
+            var authOutput = ""
+
             // Parse device code + URL from auth output in real time
             pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
                 let data = handle.availableData
                 guard !data.isEmpty, let str = String(data: data, encoding: .utf8) else { return }
+
+                authOutput += str
 
                 // Match: code "XXXX-XXXX" in https://github.com/login/device
                 if let codeRange = str.range(of: #""([A-Z0-9]{4}-[A-Z0-9]{4})""#, options: .regularExpression) {
@@ -467,13 +485,23 @@ final class ProxyManager {
                 proc.waitUntilExit()
                 pipe.fileHandleForReading.readabilityHandler = nil
 
+                let exitCode = proc.terminationStatus
+                let output = authOutput
                 await MainActor.run {
                     self.authProcess = nil
                     self.isLoggingIn = false
                     self.loginDeviceCode = nil
                     self.loginDeviceURL = nil
-                    // Re-check info after auth completes
-                    self.checkCopilotInfo()
+                    if exitCode != 0 {
+                        let hint = Self.diagnoseProcessError(output)
+                        let errorMsg = hint.isEmpty ? "Login failed (exit code \(exitCode))" : hint
+                        self.loginError = errorMsg
+                        self.appendLog("Login failed (exit \(exitCode)): \(errorMsg)")
+                    } else {
+                        self.loginError = nil
+                        // Re-check info after auth completes
+                        self.checkCopilotInfo()
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -517,6 +545,112 @@ final class ProxyManager {
     private func appendLog(_ message: String) {
         let ts = Self.timestampFormatter.string(from: Date())
         logs += "[\(ts)] \(message)\n"
+    }
+
+    // MARK: - Node.js Version Check
+
+    func installNode() {
+        guard !isInstallingNode else { return }
+        isInstallingNode = true
+        nodeInstallOutput = ""
+
+        Task.detached { [weak self] in
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            proc.arguments = ["-l", "-c", "brew install node"]
+
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+
+            pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+                let data = handle.availableData
+                guard !data.isEmpty, let str = String(data: data, encoding: .utf8) else { return }
+                Task { @MainActor [weak self] in
+                    self?.nodeInstallOutput += str
+                }
+            }
+
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                pipe.fileHandleForReading.readabilityHandler = nil
+
+                let success = proc.terminationStatus == 0
+                await MainActor.run {
+                    self?.isInstallingNode = false
+                    if success {
+                        self?.appendLog("Node.js installed successfully")
+                    } else {
+                        self?.appendLog("Node.js installation failed (exit \(proc.terminationStatus))")
+                    }
+                    // Re-check version after install
+                    self?.checkNodeVersion()
+                    // Also re-check copilot-api since npm is now available
+                    self?.recheckInstallation()
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isInstallingNode = false
+                    self?.nodeInstallOutput += "\nError: \(error.localizedDescription)"
+                    self?.appendLog("Failed to install Node.js: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func checkNodeVersion() {
+        Task.detached { [weak self] in
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            proc.arguments = ["-l", "-c", "node --version"]
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let raw = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                // Parse version like "v20.11.0" -> (20, 11, 0)
+                let versionOK: Bool = {
+                    let cleaned = raw.hasPrefix("v") ? String(raw.dropFirst()) : raw
+                    let parts = cleaned.split(separator: ".").compactMap { Int($0) }
+                    guard parts.count >= 2 else { return false }
+                    // Require >= 20.5.0
+                    if parts[0] > 20 { return true }
+                    if parts[0] == 20 && parts[1] >= 5 { return true }
+                    return false
+                }()
+                await MainActor.run {
+                    self?.nodeVersion = raw.isEmpty ? nil : raw
+                    self?.isNodeVersionOK = versionOK
+                }
+            } catch {
+                await MainActor.run {
+                    self?.nodeVersion = nil
+                    self?.isNodeVersionOK = false
+                }
+            }
+        }
+    }
+
+    /// Analyze process output for common errors and return a user-friendly hint.
+    nonisolated static func diagnoseProcessError(_ output: String) -> String {
+        // Node.js version too old — missing APIs like addAbortListener (requires v20.5+)
+        if output.contains("does not provide an export named") || output.contains("SyntaxError") {
+            return "Node.js version too old. copilot-api requires Node.js v20.5.0+. Please upgrade: brew install node"
+        }
+        // Module not found
+        if output.contains("Cannot find module") || output.contains("MODULE_NOT_FOUND") {
+            return "Node.js module missing. Try reinstalling: npm install -g copilot-api"
+        }
+        // Permission denied
+        if output.contains("EACCES") || output.contains("permission denied") {
+            return "Permission denied. Try: sudo npm install -g copilot-api"
+        }
+        return ""
     }
 
     nonisolated private static let timestampFormatter: DateFormatter = {
